@@ -9,7 +9,7 @@ if ("WebSocket" in window)
 
 var Juggernaut = function(host, port, options){
   this.host = host || "localhost";
-  this.port = 8080;
+  this.port = port || 8080;
   
   this.options = options || {};
   

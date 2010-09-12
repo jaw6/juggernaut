@@ -4,51 +4,105 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <title>Juggernaut</title>
   <script src="application.js" type="text/javascript" charset="utf-8"></script>
-  
+  <script src="/jquery-1.4.2.min.js" type="text/javascript" charset="utf-8"></script>
   <style type="text/css" media="screen">
     h1 {
       margin: 1em 0;
     }
     
-    #log {
-      padding: 5px;
-      background: #CCC;
-      height: 500px;
-      width: 400px;
+    #chat {
+      height: 15em;
+      overflow: scroll;
+      border: 1px solid black;
+    }
+
+    #talk {
+      width: 100%;
+      font-size: 14pt;
+      padding: 10px;
     }
   </style>
   
   <script type="text/javascript" charset="utf-8">
-    window.addEventListener("load", function(){
-      
-      var logElement = document.getElementById("log");
-      logElement.value = "";
+    $(document).ready(function() {
+      var chatElement = $('#chat');
       var log = function(data){
-        logElement.value += (data + "\n");
+        var json = JSON.stringify({who: 'Log', msg: data});
+        say(json);
       };
+      var say = function(msg) {
+        if (typeof(msg) == 'string')
+          var json = JSON.parse(msg);
+        else
+          json = msg;
+        var who = json['who'];
+        var msg = json['msg'];
+        chatElement.prepend("<dt>"+who+":</dt>\n<dd>"+msg+"</dd>");
+      }
       
-      var jug = new Juggernaut;
+      var host = window.location.hostname;
+      var jug = new Juggernaut(host);
       
       jug.on("connect", function(){ log("Connected") });
       jug.on("disconnect", function(){ log("Disconnected") });
       jug.on("reconnect", function(){ log("Reconnecting") });
       
       log("Subscribing to channel1");
+      var channel = 'channel1';
+      window.channel = channel;
       
-      jug.subscribe("channel1", function(data){
-        log("Got data: " + data);
+      jug.subscribe(window.channel, function(data){
+        say(data);
       });
+      
+      var writer = function() {
+        var el = $('#talk');
+        var msg = el.get(0).value;
+        if (msg != '') {
+          var msg = {who: window.user, msg: msg};
+          el.blur();
+          window.jug.publish(window.channel, msg);
+          el.get(0).value = '';
+          setTimeout(function() { el.focus(); }, 10)
+        }
+      }
+      window.writer = writer;
+      
+      $('#contribute').bind('submit', function(event) { 
+        event.preventDefault();
+        window.writer(); 
+      })
       
       // Expose for debugging
       window.jug = jug;
       
-    }, false);
+      $('#logon_form').submit(function() {
+        var user = $('#user_id').val();
+        if (user && user != '') {
+          window.user = user;
+          $('#logon, #logged_on').toggle();
+        }
+        return false;
+      })
+    })
   </script>
 </head>
 <body>
 
   <h1>Juggernaut - Hello World!</h1>
-  
-  <textarea id="log" readonly></textarea>
+  <div id='logon'>
+    <form id='logon_form'>
+      <label>Username? </label>
+      <input type='text' id='user_id' autofocus='autofocus' />
+    </form>
+  </div>
+
+  <div id='logged_on' style='display:none'>
+    <dl id="chat">
+    </dl>
+    <form id='contribute'>
+      <input type='text' id='talk' autofocus='autofocus' value='' />
+    </form>
+  </div>
 </body>
 </html>
